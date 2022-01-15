@@ -3,14 +3,14 @@ AFRAME.registerComponent('glow', {
     enabled: {default: true},
     c: {type: 'number', default: 1 },
     p: {type: 'number', default: 1.4 },
-    color: {type: 'color', default: '#FFFF00'},
+    color: {type: 'color', default: '#FFF'},
     scale: {type: 'number', default: 2 },
     side: {type: 'string', default: "front" },
   },
   init: function () {
     var scene = this.el.sceneEl.object3D;
     var that = this;
-    var run = function() {
+    var run = () => {
       var camera = document.querySelector('[camera]').object3D;
       that.camera = camera;
 
@@ -34,18 +34,18 @@ AFRAME.registerComponent('glow', {
     		transparent: true
     	});
 
-      // ISSUE for OBJs: >> line below
-      var object = that.el.object3DMap.mesh.geometry.clone();
-      object = new THREE.Geometry().fromBufferGeometry(object);
-      var modifier = new THREE.BufferSubdivisionModifier( 2 );
-      object = modifier.modify( object );
+		this.el.object3D.traverse(n => {
+			if (n.isMesh ) {
+				that.glowMesh = new THREE.Mesh( n.geometry, that.glowMaterial);
+				this.el.object3D.add( that.glowMesh );
+		
+				if (!that.data.enabled) {
+					that.glowMesh.visible = false;
+				}	
+			}
+		})
 
-      that.glowMesh = new THREE.Mesh( object, that.glowMaterial);
-    	that.el.object3D.add( that.glowMesh );
-
-      if (!that.data.enabled) {
-       that.glowMesh.visible = false;
-      }
+		
     }
 
     // Make sure the entity has a mesh, otherwise wait for the 3D model to be loaded..
@@ -212,12 +212,6 @@ TypedArrayHelper.prototype = {
 
 		}
 
-		if ( index > this.length ) {
-
-			throw new Error( 'THREE.BufferSubdivisionModifier: Index is out of range in TypedArrayHelper.' );
-
-		}
-
 		for ( var i = 0; i < this.unit_size; i++ ) {
 
 			( this.register[ register ] )[ this.accessors[ i ] ] = this.buffer[ base + i ];
@@ -359,7 +353,7 @@ function compute_vertex_normals( geometry ) {
 	var newNormalFaces = new TypedArrayHelper( oldVertices.length, 1, function () { this.x = 0; }, Float32Array, 1, [ 'x' ] );
 
 	newNormals.length = oldVertices.length;
-	oldFaces.from_existing( geometry.index.array );
+	oldFaces.from_existing( geometry.getIndex().array );
 	var a, b, c;
 	var my_weight;
 	var full_weights = [ 0.0, 0.0, 0.0 ];
@@ -439,7 +433,7 @@ function unIndexIndexedGeometry( geometry ) {
 	var oldNormals = new TypedArrayHelper( 0, 3, THREE.Vector3, Float32Array, 3, XYZ );
 
 	oldVertices.from_existing( geometry.getAttribute( 'position' ).array );
-	oldFaces.from_existing( geometry.index.array );
+	oldFaces.from_existing( geometry.getIndex().array );
 	oldUvs.from_existing( geometry.getAttribute( 'uv' ).array );
 
 	compute_vertex_normals( geometry );
@@ -511,19 +505,7 @@ THREE.BufferSubdivisionModifier = function( subdivisions ) {
 
 THREE.BufferSubdivisionModifier.prototype.modify = function( geometry ) {
 
-	if ( geometry instanceof THREE.Geometry ) {
-
-		geometry.mergeVertices();
-
-		if ( typeof geometry.normals === 'undefined' ) {
-
-			geometry.normals = [];
-
-		}
-
-		geometry = convertGeometryToIndexedBuffer( geometry );
-
-	} else if ( !( geometry instanceof THREE.BufferGeometry ) ) {
+	if ( !( geometry instanceof THREE.BufferGeometry ) ) {
 
 		console.error( 'THREE.BufferSubdivisionModifier: Geometry is not an instance of THREE.BufferGeometry or THREE.Geometry' );
 
@@ -651,7 +633,7 @@ var edge_type = function ( a, b ) {
 		oldFaces = new TypedArrayHelper( 0, 3, THREE.Face3, Uint32Array, 3, ABC );
 		oldUvs = new TypedArrayHelper( 0, 3, THREE.Vector2, Float32Array, 2, XY );
 		oldVertices.from_existing( geometry.getAttribute( 'position' ).array );
-		oldFaces.from_existing( geometry.index.array );
+		oldFaces.from_existing( geometry.getIndex().array );
 		oldUvs.from_existing( geometry.getAttribute( 'uv' ).array );
 
 		var doUvs = false;
@@ -820,7 +802,7 @@ var edge_type = function ( a, b ) {
 
 
 		var edge1, edge2, edge3;
-		newFaces = new TypedArrayHelper( ( geometry.index.array.length * 4 ) / 3, 1, THREE.Face3, Float32Array, 3, ABC );
+		newFaces = new TypedArrayHelper( ( geometry.getIndex().array.length * 4 ) / 3, 1, THREE.Face3, Float32Array, 3, ABC );
 		newUVs = new TypedArrayHelper( ( geometry.getAttribute( 'uv' ).array.length * 4 ) / 2, 3, THREE.Vector2, Float32Array, 2, XY );
 		var x3 = newUVs.register[ 0 ];
 		var x4 = newUVs.register[ 1 ];
